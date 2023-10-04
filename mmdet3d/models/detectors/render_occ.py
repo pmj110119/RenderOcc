@@ -77,7 +77,7 @@ class RenderOcc(BEVStereo4DOCC):
         self.nerf_head = builder.build_head(nerf_head)
       
 
-    def loss_single(self,voxel_semantics,mask_camera,density_prob, semantic):
+    def loss_3d(self,voxel_semantics,mask_camera,density_prob, semantic):
         voxel_semantics=voxel_semantics.long()
      
         voxel_semantics=voxel_semantics.reshape(-1)
@@ -91,8 +91,8 @@ class RenderOcc(BEVStereo4DOCC):
         loss_sem = self.semantic_loss(semantic[semantic_mask], voxel_semantics[semantic_mask].long())
 
         loss_ = dict()
-        loss_['loss_geo'] = loss_geo
-        loss_['loss_sem'] = loss_sem
+        loss_['loss_3d_geo'] = loss_geo
+        loss_['loss_3d_sem'] = loss_sem
         return loss_
 
 
@@ -130,12 +130,10 @@ class RenderOcc(BEVStereo4DOCC):
                       img_metas=None,
                       img_inputs=None,
                       **kwargs):
-        # reorg inputs
+        # extract volumn feature
         img_inputs = self.prepare_inputs(img_inputs, stereo=True)
         imgs, sensor2keyegos, ego2globals, intrins, post_rots, post_trans, \
                 bda, curr2adjsensor = img_inputs
-
-        # extract volumn feature
         img_feats, depth = self.extract_img_feat(img_inputs, img_metas, **kwargs)
         voxel_feats = self.final_conv(img_feats[0]).permute(0, 4, 3, 2, 1) # bncdhw->bnwhdc
 
@@ -150,7 +148,7 @@ class RenderOcc(BEVStereo4DOCC):
             voxel_semantics = kwargs['voxel_semantics']
             mask_camera = kwargs['mask_camera']
             assert voxel_semantics.min() >= 0 and voxel_semantics.max() <= 17
-            loss_occ = self.loss_single(voxel_semantics, mask_camera, density_prob, semantic)
+            loss_occ = self.loss_3d(voxel_semantics, mask_camera, density_prob, semantic)
             losses.update(loss_occ)
 
         if self.nerf_head:          # 2D rendering loss
@@ -159,7 +157,7 @@ class RenderOcc(BEVStereo4DOCC):
 
         if self.use_lss_depth_loss: # lss-depth loss (BEVStereo's feature)
             loss_depth = self.img_view_transformer.get_depth_loss(kwargs['gt_depth'], depth)
-            losses['loss_depth'] = loss_depth
+            losses['loss_lss_depth'] = loss_depth
 
         return losses
 

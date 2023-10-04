@@ -75,4 +75,4 @@ class silog_loss(nn.Module):
 
     def forward(self, depth_est, depth_gt):
         d = torch.log(depth_est) - torch.log(depth_gt)
-        return torch.sqrt((d ** 2).mean() - self.variance_focus * (d.mean() ** 2)) * 10.0
+        return torch.sqrt((d ** 2).mean() - self.variance_focus * (d.mean() ** 2))

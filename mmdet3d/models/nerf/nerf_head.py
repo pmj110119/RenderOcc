@@ -29,10 +29,10 @@ def create_full_step_id(shape):
     step_id = torch.arange(shape[1]).view(1,-1).expand(shape).flatten()
     return ray_id, step_id
 
-def sample_ray(ori_rays_o, ori_rays_d, stepsize, scene_center, scene_radius, bg_len, world_len, bda, **render_kwargs):
+def sample_ray(ori_rays_o, ori_rays_d, step_size, scene_center, scene_radius, bg_len, world_len, bda, **render_kwargs):
     rays_o = (ori_rays_o - scene_center) / scene_radius       # normalization
     rays_d = ori_rays_d / ori_rays_d.norm(dim=-1, keepdim=True)
-    N_inner = int(2 / (2+2*bg_len) * world_len / stepsize) + 1
+    N_inner = int(2 / (2+2*bg_len) * world_len / step_size) + 1
     N_outer = N_inner//15   # hardcode: 15
     b_inner = torch.linspace(0, 2, N_inner+1)
     b_outer = 2 / torch.linspace(1, 1/64, N_outer+1)
@@ -62,17 +62,17 @@ class NerfHead(nn.Module):
     def __init__(self, 
             point_cloud_range,
             voxel_size,
+            scene_center=None,
+            radius=39,
+            step_size=0.5, 
+            use_depth_sup=False,
+            balance_cls_weight=True,
+            weight_depth=1.0,
+            weight_semantic=1.0,
+            weight_entropy_last=0.01,   
+            weight_distortion=0.01,
             alpha_init=1e-6,
             fast_color_thres=1e-7,
-            loss_depth_weight=0.1,
-            loss_semantic_weight=0.5,
-            use_depth_sample=False,
-            balance_cls_weight=True,
-            stepsize=0.5, 
-            weight_entropy_last=0.0,   
-            weight_distortion=0,
-            scene_center=None,
-            radius=38,
             ):
         super().__init__()
         self.weight_entropy_last = weight_entropy_last
@@ -89,8 +89,8 @@ class NerfHead(nn.Module):
         self.register_buffer('scene_center', ((xyz_min + xyz_max) * 0.5))
         self.register_buffer('scene_radius', torch.Tensor([radius, radius, radius]))
 
-        self.stepsize = stepsize
-        self.use_depth_sample = use_depth_sample
+        self.step_size = step_size
+        self.use_depth_sup = use_depth_sup
         
         z_ = xyz_range[2]/xyz_range[0]
         self.register_buffer('xyz_min', torch.Tensor([-1-self.bg_len, -1-self.bg_len, -z_]))
@@ -106,8 +106,8 @@ class NerfHead(nn.Module):
         self.world_len = self.world_size[0].item()
 
         self.fast_color_thres = fast_color_thres
-        self.loss_depth_weight = loss_depth_weight
-        self.loss_semantic_weight = loss_semantic_weight
+        self.weight_depth = weight_depth
+        self.weight_semantic = weight_semantic
         self.depth_loss = silog_loss()
 
         if balance_cls_weight:
@@ -134,7 +134,7 @@ class NerfHead(nn.Module):
         # sample points on rays
         ray_pts, inner_mask, t = sample_ray(
             ori_rays_o=rays_o, ori_rays_d=rays_d, 
-            stepsize=self.stepsize,
+            step_size=self.step_size,
             scene_center=self.scene_center, 
             scene_radius=self.scene_radius, 
             bg_len=self.bg_len, 
@@ -147,7 +147,7 @@ class NerfHead(nn.Module):
 
         # skip oversampled points outside scene bbox
         mask = inner_mask.clone()
-        dist_thres = (2+2*self.bg_len) / self.world_len * self.stepsize * 0.95
+        dist_thres = (2+2*self.bg_len) / self.world_len * self.step_size * 0.95
         dist = (ray_pts[:,1:] - ray_pts[:,:-1]).norm(dim=-1)
         mask[:, 1:] |= ub360_utils_cuda.cumdist_thres(dist, dist_thres)
         ray_pts = ray_pts[mask]
@@ -216,9 +216,9 @@ class NerfHead(nn.Module):
 
     def compute_loss(self, results):
         losses = {}
-        if self.use_depth_sample:
+        if self.use_depth_sup:
             depth_loss = self.depth_loss(results['render_depth']+1e-7, results['target_depth'])
-            losses['loss_render_depth'] = depth_loss * self.loss_depth_weight
+            losses['loss_render_depth'] = depth_loss * self.weight_depth
         
         target_semantic = results['target_semantic']
         semantic = results['render_semantic']
@@ -226,7 +226,7 @@ class NerfHead(nn.Module):
             weight=self.class_weights.type_as(semantic), reduction="mean"
         )
         semantic_loss = criterion(semantic, target_semantic.long())
-        losses['loss_render_semantic'] = semantic_loss * self.loss_semantic_weight
+        losses['loss_render_semantic'] = semantic_loss * self.weight_semantic
     
 
         if self.weight_entropy_last > 0:
@@ -298,7 +298,7 @@ class NerfHead(nn.Module):
             )
 
             # render depth & semantic
-            if self.use_depth_sample:
+            if self.use_depth_sup:
                 results['render_depth'] = self.render_depth(results)
             results['render_semantic'] = self.render_semantic(results)
             # compute loss
