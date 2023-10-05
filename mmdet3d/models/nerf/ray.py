@@ -118,8 +118,9 @@ def generate_rays(depth_map, seg_map, c2w, intrins, img_size=(900,1600), max_ray
                 # wrs-a
                 ans = 1.0 if ids[i]==0 else weight_adj
                 weight_t = torch.full((rays[i].shape[0],), ans, device=device)
-                mask_dynamic = (dynamic_class[batch_id] == rays[i][:, 3, None]).any(dim=-1)
-                weight_t[mask_dynamic] = weight_dyn
+                if ids[i]!=0:
+                    mask_dynamic = (dynamic_class[batch_id] == rays[i][:, 3, None]).any(dim=-1)
+                    weight_t[mask_dynamic] = weight_dyn
                 # wrs-b
                 weight_b = balance_weight[batch_id][rays[i][..., 3].long()]
 
