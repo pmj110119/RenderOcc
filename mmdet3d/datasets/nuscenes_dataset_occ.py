@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import time
 import mmcv
 import torch
 import cv2
@@ -10,8 +11,6 @@ from pyquaternion import Quaternion
 from .builder import DATASETS
 from .nuscenes_dataset import NuScenesDataset
 from .occ_metrics import Metric_mIoU, Metric_FScore
-from .ray import generate_rays
-
 
 nusc_class_nums = torch.Tensor([
     2854504, 7291443, 141614, 4239939, 32248552, 
@@ -22,21 +21,21 @@ nusc_class_nums = torch.Tensor([
 dynamic_class = [0, 1, 3, 4, 5, 7, 9, 10]
 
 
-def load_depth(img_file_path, gt_path):
+def load_depth(img_file_path, gt_path, img_size=[900,1600]):
     file_name = os.path.split(img_file_path)[-1]
     cam_depth = np.fromfile(os.path.join(gt_path, f'{file_name}.bin'),
         dtype=np.float32,
         count=-1).reshape(-1, 3)
     
     coords = cam_depth[:, :2].astype(np.int16)
-    depth_label = cam_depth[:,2]
-    return coords, depth_label
+
+    depth_map = np.ones(img_size) * (-1)
+    depth_map[coords[:, 1],coords[:, 0]] = cam_depth[:,2]
+    return depth_map
 
 def load_seg_label(img_file_path, gt_path, img_size=[900,1600], mode='lidarseg'):
     if mode=='lidarseg':  # proj lidarseg to img
-        coor, seg_label = load_depth(img_file_path, gt_path)
-        seg_map = np.zeros(img_size)
-        seg_map[coor[:, 1],coor[:, 0]] = seg_label
+        seg_map = load_depth(img_file_path, gt_path)
     else:
         file_name = os.path.join(gt_path, f'{os.path.split(img_file_path)[-1]}.npy')
         seg_map = np.load(file_name)
@@ -92,15 +91,14 @@ class NuScenesDatasetOccpancy(NuScenesDataset):
         self.dynamic_class = torch.tensor(dynamic_class)
 
 
-    def get_rays(self, index):
+    def get_rays_info(self, index):
         info = self.data_infos[index]
 
         sensor2egos = []
         ego2globals = []
         intrins = []
-        coors = []
-        label_depths = []
-        label_segs = []
+        depth_maps = []
+        seg_maps = []
         time_ids = {}
         idx = 0
 
@@ -118,15 +116,13 @@ class NuScenesDatasetOccpancy(NuScenesDataset):
 
                 # load seg/depth GT of rays
                 seg_map = load_seg_label(img_file_path, self.semantic_gt_path)
-                coor, label_depth = load_depth(img_file_path, self.depth_gt_path)
-                label_seg = seg_map[coor[:,1], coor[:,0]]
+                depth_map = load_depth(img_file_path, self.depth_gt_path)
 
                 sensor2egos.append(sensor2ego)
                 ego2globals.append(ego2global)
                 intrins.append(intrin)
-                coors.append(torch.Tensor(coor))
-                label_depths.append(torch.Tensor(label_depth))
-                label_segs.append(torch.Tensor(label_seg))
+                depth_maps.append(torch.Tensor(depth_map))
+                seg_maps.append(torch.Tensor(seg_map))
                 time_ids[time_id].append(idx)
                 idx += 1
         
@@ -143,14 +139,17 @@ class NuScenesDatasetOccpancy(NuScenesDataset):
         sensor2keyegos = sensor2keyegos.float()
         sensor2keyegos = sensor2keyegos.view(T*N, 4, 4)
 
-        # generate rays for all frames
-        rays = generate_rays(
-            coors, label_depths, label_segs, sensor2keyegos, intrins, 1600, 900, 
-            max_ray_nums=self.max_ray_nums, 
-            time_ids=time_ids, 
-            dynamic_class=self.dynamic_class, 
-            balance_weight=self.WRS_balance_weight)
-        return rays
+        rays_info = {
+            'depth_map': torch.stack(depth_maps),
+            'seg_map': torch.stack(seg_maps),
+            'c2w': sensor2keyegos,
+            'intrins': torch.stack(intrins),
+            'max_ray_nums': self.max_ray_nums,
+            'time_ids': time_ids,
+            'dynamic_class': self.dynamic_class,
+            'balance_weight': self.WRS_balance_weight,
+        }
+        return rays_info
 
     def get_data_info(self, index):
         input_dict = super(NuScenesDatasetOccpancy, self).get_data_info(index)
@@ -159,10 +158,10 @@ class NuScenesDatasetOccpancy(NuScenesDataset):
             input_dict['occ_gt_path'] = self.data_infos[index]['occ_path']
         # generate rays for rendering supervision
         if self.use_rays:
-            rays = self.get_rays(index)
-            input_dict['rays'] = rays
+            rays_info = self.get_rays_info(index)
+            input_dict['rays_info'] = rays_info
         else:
-            input_dict['rays'] = torch.zeros((1))
+            input_dict['rays_info'] = torch.zeros((1))
         return input_dict
 
     def evaluate(self, occ_results, runner=None, show_dir=None, **eval_kwargs):
@@ -179,6 +178,13 @@ class NuScenesDatasetOccpancy(NuScenesDataset):
             gt_semantics = occ_gt['semantics']
             mask_lidar = occ_gt['mask_lidar'].astype(bool)
             mask_camera = occ_gt['mask_camera'].astype(bool)
+            # occ_pred = occ_pred
             self.occ_eval_metrics.add_batch(occ_pred, gt_semantics, mask_lidar, mask_camera)
+
+            if index%100==0 and show_dir is not None:
+                gt_vis = self.vis_occ(gt_semantics)
+                pred_vis = self.vis_occ(occ_pred)
+                mmcv.imwrite(np.concatenate([gt_vis, pred_vis], axis=1),
+                             os.path.join(show_dir + "%d.jpg"%index))
 
         return self.occ_eval_metrics.count_miou()

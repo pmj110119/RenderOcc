@@ -151,7 +151,7 @@ train_pipeline = [
     dict(
         type='Collect3D', keys=['img_inputs', 'gt_depth', 'voxel_semantics',
                                 'mask_lidar','mask_camera',
-                                'gt_depths', 'rays'
+                                'gt_depths', 'rays_info'
                                ])
 ]
 
@@ -186,7 +186,7 @@ test_pipeline = [
                 with_label=False),
             dict(type='Collect3D', keys=['points', 'img_inputs', 'voxel_semantics',
                                         'mask_lidar','mask_camera',
-                                        'gt_depths', 'gt_semantics','rays'])
+                                        'gt_depths', 'gt_semantics','rays_info'])
         ])
 ]
 
@@ -212,7 +212,7 @@ test_data_config = dict(
     ann_file=data_root + 'bevdetv2-nuscenes_infos_val.pkl')
 
 data = dict(
-    samples_per_gpu=2,  # with 2x8 GPU
+    samples_per_gpu=1,  # with 32 GPU, Batch Size=32 
     workers_per_gpu=2,
     train=dict(
         data_root=data_root,
@@ -231,7 +231,7 @@ for key in ['val', 'train', 'test']:
     data[key].update(share_data_config)
 
 # Optimizer
-optimizer = dict(type='AdamW', lr=2e-4, weight_decay=1e-2)
+optimizer = dict(type='AdamW', lr=1e-4, weight_decay=1e-2)
 optimizer_config = dict(grad_clip=dict(max_norm=5, norm_type=2))
 lr_config = dict(
     policy='step',

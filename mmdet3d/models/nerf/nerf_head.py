@@ -11,7 +11,7 @@ from torch_scatter import segment_coo
 from torch_efficient_distloss import flatten_eff_distloss
 
 from .utils import Raw2Alpha, Alphas2Weights, ub360_utils_cuda, silog_loss
-
+from .ray import generate_rays
 
 # OpenOccupancy
 # nusc_class_frequencies = np.array([2242961742295, 25985376, 1561108, 28862014, 196106643, 15920504,
@@ -54,6 +54,50 @@ def sample_ray(ori_rays_o, ori_rays_d, step_size, scene_center, scene_radius, bg
     ray_pts = bda.matmul(ray_pts.unsqueeze(-1)).squeeze(-1)
     return ray_pts, inner_mask.squeeze(-1), t
 
+def sample_ray_batch(ori_rays_o, ori_rays_d, step_size, scene_center, scene_radius, bg_len, world_len, bda, **render_kwargs):
+    rays_o = (ori_rays_o - scene_center) / scene_radius       # normalization
+    rays_d = ori_rays_d / ori_rays_d.norm(dim=-1, keepdim=True)
+    N_inner = int(2 / (2+2*bg_len) * world_len / step_size) + 1
+    N_outer = N_inner//20   # hardcode: 15
+    b_inner = torch.linspace(0, 2, N_inner+1)
+    b_outer = 2 / torch.linspace(1, 1/64, N_outer+1)
+    t = torch.cat([
+        (b_inner[1:] + b_inner[:-1]) * 0.5,
+        (b_outer[1:] + b_outer[:-1]) * 0.5,
+    ]).to(rays_o)
+    ray_pts = rays_o[:,None,:] + rays_d[:,None,:] * t[None,:,None]
+
+    norm = ray_pts.norm(dim=-1, keepdim=True)
+    inner_mask = (norm<=1)
+    ray_pts = torch.where(
+        inner_mask,
+        ray_pts,
+        ray_pts / norm * ((1+bg_len) - bg_len/norm)
+    )
+
+    # reverse bda-aug 
+    ray_pts = bda.matmul(ray_pts.unsqueeze(-1)).squeeze(-1)
+    return ray_pts, inner_mask.squeeze(-1), t
+
+class TimeCounter:
+    def __init__(self):
+        self.times = [time.time()]
+        self.names = []
+    
+    def clear(self):
+        self.times = [time.time()]
+        self.names = []
+
+    def add(self, name):
+        self.times.append(time.time())
+        self.names.append(name)
+    
+    def print(self):
+        times = np.array(self.times)
+        times = np.diff(times*1000).astype(np.int16)
+        print('> -----Time Cost-----<')
+        for i in range(len(self.names)):
+            print('%s:  %f'%(self.names[i], times[i]))
 
 
 from mmdet.models import HEADS
@@ -142,7 +186,6 @@ class NerfHead(nn.Module):
             bda=bda,
         )
         
-        torch.cuda.empty_cache()
         ray_id, step_id = create_full_step_id(ray_pts.shape[:2])
 
         # skip oversampled points outside scene bbox
@@ -213,7 +256,6 @@ class NerfHead(nn.Module):
         }
         return results
     
-
     def compute_loss(self, results):
         losses = {}
         if self.use_depth_sup:
@@ -262,7 +304,9 @@ class NerfHead(nn.Module):
         return Raw2Alpha.apply(density.flatten(), self.act_shift, interval).reshape(shape)
 
 
-    def forward(self, density, semantic, rays=None, bda=None, **kwargs):
+    def forward(self, density, semantic, rays_info=None, bda=None, **kwargs):
+        # import pdb;pdb.set_trace()
+        rays = generate_rays(**rays_info)
         gt_depths = rays[..., 2]
         gt_semantics = rays[..., 3]
         ray_o = rays[..., 4:7]

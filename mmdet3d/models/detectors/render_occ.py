@@ -9,13 +9,13 @@ from mmcv.cnn.bricks.conv_module import ConvModule
 from torch import nn
 import numpy as np
 from .. import builder
+import time
 
 
 # occ3d-nuscenes
 nusc_class_frequencies = np.array([1163161, 2309034, 188743, 2997643, 20317180, 852476, 243808, 2457947, 
             497017, 2731022, 7224789, 214411435, 5565043, 63191967, 76098082, 128860031, 
             141625221, 2307405309])
-
 
 @DETECTORS.register_module()
 class RenderOcc(BEVStereo4DOCC):
@@ -150,14 +150,11 @@ class RenderOcc(BEVStereo4DOCC):
             assert voxel_semantics.min() >= 0 and voxel_semantics.max() <= 17
             loss_occ = self.loss_3d(voxel_semantics, mask_camera, density_prob, semantic)
             losses.update(loss_occ)
-
         if self.nerf_head:          # 2D rendering loss
-            loss_rendering = self.nerf_head(density, semantic, rays=kwargs['rays'], bda=bda)
+            loss_rendering = self.nerf_head(density, semantic, rays_info=kwargs['rays_info'], bda=bda)
             losses.update(loss_rendering)
-
         if self.use_lss_depth_loss: # lss-depth loss (BEVStereo's feature)
             loss_depth = self.img_view_transformer.get_depth_loss(kwargs['gt_depth'], depth)
             losses['loss_lss_depth'] = loss_depth
-
         return losses
 
