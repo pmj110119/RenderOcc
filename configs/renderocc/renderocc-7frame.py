@@ -21,7 +21,7 @@ depth_gt_path = './data/nuscenes/depth_gt'
 semantic_gt_path = './data/nuscenes/seg_gt_lidarseg'
 
 data = dict(
-    samples_per_gpu=2,  # with 8 GPU, Batch Size=16 
+    samples_per_gpu=1,  # with 16 GPU, Batch Size=16 
     workers_per_gpu=2,
     train=dict(
         use_rays=True,
@@ -36,5 +36,5 @@ data = dict(
 runner = dict(type='EpochBasedRunner', max_epochs=12)
 
 log_config = dict(
-    interval=1,
+    interval=50,
 )

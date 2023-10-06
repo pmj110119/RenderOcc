@@ -1,0 +1,22 @@
+open3d
+spconv
+waymo-open-dataset-tf-2-5-0
+lyft_dataset_sdk
+networkx==2.2
+numba==0.53.0
+numpy
+nuscenes-devkit
+plyfile
+scikit-image
+# by default we also use tensorboard to log results
+tensorboard
+
+mmcv-full==1.6.0
+mmdet==2.24.0
+mmsegmentation==0.24.0
+mmengine==0.7.3
+
+protobuf==3.9.2
+torch_scatter
+fvcore
+torch_efficient_distloss
