@@ -186,7 +186,7 @@ test_pipeline = [
                 with_label=False),
             dict(type='Collect3D', keys=['points', 'img_inputs', 'voxel_semantics',
                                         'mask_lidar','mask_camera',
-                                        'gt_depths', 'gt_semantics','rays_info'])
+                                        'gt_depths', 'gt_semantics','rays'])
         ])
 ]
 
