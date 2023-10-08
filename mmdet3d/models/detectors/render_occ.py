@@ -151,7 +151,7 @@ class RenderOcc(BEVStereo4DOCC):
             loss_occ = self.loss_3d(voxel_semantics, mask_camera, density_prob, semantic)
             losses.update(loss_occ)
         if self.nerf_head:          # 2D rendering loss
-            loss_rendering = self.nerf_head(density, semantic, rays_info=kwargs['rays_info'], bda=bda)
+            loss_rendering = self.nerf_head(density, semantic, rays=kwargs['rays'], bda=bda)
             losses.update(loss_rendering)
         if self.use_lss_depth_loss: # lss-depth loss (BEVStereo's feature)
             loss_depth = self.img_view_transformer.get_depth_loss(kwargs['gt_depth'], depth)

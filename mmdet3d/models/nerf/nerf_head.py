@@ -11,7 +11,7 @@ from torch_scatter import segment_coo
 from torch_efficient_distloss import flatten_eff_distloss
 
 from .utils import Raw2Alpha, Alphas2Weights, ub360_utils_cuda, silog_loss
-from .ray import generate_rays
+
 
 # OpenOccupancy
 # nusc_class_frequencies = np.array([2242961742295, 25985376, 1561108, 28862014, 196106643, 15920504,
@@ -304,9 +304,8 @@ class NerfHead(nn.Module):
         return Raw2Alpha.apply(density.flatten(), self.act_shift, interval).reshape(shape)
 
 
-    def forward(self, density, semantic, rays_info=None, bda=None, **kwargs):
-        # import pdb;pdb.set_trace()
-        rays = generate_rays(**rays_info)
+    def forward(self, density, semantic, rays=None, bda=None, **kwargs):
+        # import pdb;pdb.set_trace()s
         gt_depths = rays[..., 2]
         gt_semantics = rays[..., 3]
         ray_o = rays[..., 4:7]
