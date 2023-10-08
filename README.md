@@ -4,60 +4,59 @@
 
 ![demo](assets/demo.gif)
 
-## Note: Codebase under active development
 
+## INTRODUCTION
+
+RenderOcc is a novel paradigm for training vision-centric 3D occupancy models only with 2D labels. Specifically, we extract a NeRF-style 3D volume representation from multi-view images, and employ volume rendering techniques to establish 2D renderings, thus enabling direct 3D supervision from 2D semantics and depth labels. 
+
+### Note: Codebase under active development
 We are in the process of organizing and documenting the complete codebase. 
 
-## Get Started
-### Installation and Data Preparation
-1. Create a conda environment and install pytorch:
-    ```
-    conda create -n monodetr python=3.8
-    conda activate monodetr
 
-    conda install pytorch torchvision cudatoolkit
-    # We adopt torch 1.10.1+cu111
-    ```
+## Getting Started
+- [Installation](docs/install.md)
+- [Prepare Dataset](docs/prepare_datasets.md)
+- Train 
+  ```
+  # Train RenderOcc with 8 GPUs
+  ./tools/dist_train.sh ./configs/renderocc/renderocc-7frame.py 8
+  ```
+- Evaluation 
+  ```
+  # Eval RenderOcc with 8 GPUs
+  ./tools/dist_test.sh ./configs/renderocc/renderocc-7frame.py ./path/to/ckpts.pth 8
+  ```
+- Visualization
+  ```
+  # TODO
+  ```
 
-2. Clone and install this repo:
-    ```
-    git clone https://github.com/pmj110119/RenderOcc.git
-    cd Renderocc
 
-    pip install -r requirements.txt
-    pip install -v -e .
-    ```
+## Model Zoo
 
-3. Prepare dataset
-    step 1: Download nuScenes dataset from [HERA](https://www.nuscenes.org/download) on `./data/nuscenes`.
-    step 2: Download (only) the 'gts' from [HERA](https://github.com/CVPR2023-3D-Occupancy-Prediction/CVPR2023-3D-Occupancy-Prediction) on `./data/nuscenes` and arrange the folder as:
-    ```
-    └── nuscenes
-    ├── v1.0-trainval (step 1)
-    ├── sweeps  (step 1)
-    ├── samples (step 1)
-    └── gts     (step 2)
-    ```
-    step 3: Create the pkl:
-    ```
-    python tools/create_data_occ.py
-    ```
-    step 4: Create 2D GT for RenderOcc:
-    ```
-    python tools/gen_data/gen_depth_gt.py
-    python tools/gen_data/gen_seg_gt_from_lidarseg.py
-    ```
+| Backbone | 2D-to-3D | Lr Schd | IoU|  Config | Download |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| Swin-Base | BEVStereo | 12ep | 24.46 |[config](configs/renderocc/renderocc-7frame.py) |[model](https://github.com/pmj110119/storage/releases/download/v1/renderocc-7frame-12e.pth)|
 
-### Train
+* More model weights will be released later.
+
+## Acknowledgement
+
+Many thanks to these excellent open source projects:
+
+- [BEVDet](https://github.com/HuangJunJie2017/BEVDet), [DVGO](https://github.com/sunset1995/DirectVoxGO), [Occ3D](https://github.com/Tsinghua-MARS-Lab/Occ3D), [SurroundDepth](https://github.com/JeffWang987/OpenOccupancy), [OpenOccupancy](https://github.com/JeffWang987/OpenOccupancy), [CVPR2023-Occ-Challenge](https://github.com/CVPR2023-3D-Occupancy-Prediction)
+
+Related Projects:
+
+- [SurroundOcc](https://github.com/weiyithu/SurroundOcc), [TPVFormer](https://github.com/wzzheng/TPVFormer), [BEVFormer](https://github.com/fundamentalvision/BEVFormer), [VoxFormer](https://github.com/NVlabs/VoxFormer), [FB-Occ](https://github.com/NVlabs/FB-BEV), [SimpleOccupancy](https://github.com/GANWANSHUI/SimpleOccupancy), [OVO](https://github.com/dzcgaara/OVO-Open-Vocabulary-Occupancy)
+
+## BibTeX
+If this work is helpful for your research, please consider citing:
 ```
-# multiple gpu
-./tools/dist_train.sh configs/renderocc/renderocc-7frame.py 8
+@article{Pan2023_RenderOcc,   
+  title={RenderOcc: Vision-Centric 3D Occupancy Prediction with 2D Rendering Supervision},  
+  author={Pan, Mingjie and Liu, Jiaming and Zhang, Renrui and Huang, Peixiang and Li, Xiaoqi and Liu, Li and Zhang, Shanghang},  
+  year={2023},  
+  month={Sep}
+}
 ```
-( Please download pretrain model for BEVStereo from [HERE](https://pan.baidu.com/s/1237QyV18zvRJ1pU3YzRItw?pwd=npe1) and put it on `assets/` )
-
-### test
-```
-# multiple gpu
-./tools/dist_test.sh configs/renderocc/renderocc-7frame.py $checkpoint 8
-```
-    

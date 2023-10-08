@@ -209,14 +209,14 @@ share_data_config = dict(
 
 test_data_config = dict(
     pipeline=test_pipeline,
-    ann_file=data_root + 'occ-nuscenes_infos_val.pkl')
+    ann_file=data_root + 'bevdetv2-nuscenes_infos_val.pkl')
 
 data = dict(
     samples_per_gpu=1,  # with 32 GPU, Batch Size=32 
     workers_per_gpu=2,
     train=dict(
         data_root=data_root,
-        ann_file=data_root + 'occ-nuscenes_infos_train.pkl',
+        ann_file=data_root + 'bevdetv2-nuscenes_infos_train.pkl',
         pipeline=train_pipeline,
         classes=class_names,
         test_mode=False,
@@ -253,5 +253,5 @@ custom_hooks = [
     ),
 ]
 
-load_from="/pmj/checkpoints/bevdet-stbase-4d-stereo-512x1408-cbgs.pth"
+load_from="/ckpts/bevdet-stbase-4d-stereo-512x1408-cbgs.pth"
 # fp16 = dict(loss_scale='dynamic')

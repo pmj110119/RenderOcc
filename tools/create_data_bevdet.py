@@ -138,7 +138,7 @@ if __name__ == '__main__':
     version = 'v1.0'
     train_version = f'{version}-trainval'
     root_path = './data/nuscenes'
-    extra_tag = 'occ-nuscenes'
+    extra_tag = 'bevdetv2-nuscenes'
     nuscenes_data_prep(
         root_path=root_path,
         info_prefix=extra_tag,
