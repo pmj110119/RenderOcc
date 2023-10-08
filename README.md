@@ -34,9 +34,9 @@ We are in the process of organizing and documenting the complete codebase.
 
 ## Model Zoo
 
-| Backbone | 2D-to-3D | Lr Schd | IoU|  Config | Download |
-| :---: | :---: | :---: | :---: | :---: | :---: |
-| Swin-Base | BEVStereo | 12ep | 24.46 |[config](configs/renderocc/renderocc-7frame.py) |[model](https://github.com/pmj110119/storage/releases/download/v1/renderocc-7frame-12e.pth)|
+| Method | Backbone | 2D-to-3D | Lr Schd | mIoU|  Config | Download |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| RenderOcc | Swin-Base | BEVStereo | 12ep | 24.46 |[config](configs/renderocc/renderocc-7frame.py) |[model](https://github.com/pmj110119/storage/releases/download/v1/renderocc-7frame-12e.pth)|
 
 * More model weights will be released later.
 
