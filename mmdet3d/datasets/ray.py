@@ -100,8 +100,9 @@ def generate_rays(coors, label_depths, label_segs, c2w, intrins, max_ray_nums=0,
             # wrs-a
             ans = 1.0 if ids[i]==0 else weight_adj
             weight_t = torch.full((rays[i].shape[0],), ans)
-            mask_dynamic = (dynamic_class == rays[i][:, 3, None]).any(dim=-1)
-            weight_t[mask_dynamic] = weight_dyn
+            if ids[i]!=0:
+                mask_dynamic = (dynamic_class == rays[i][:, 3, None]).any(dim=-1)
+                weight_t[mask_dynamic] = weight_dyn
             # wrs-b
             weight_b = balance_weight[rays[i][..., 3].long()]
 
