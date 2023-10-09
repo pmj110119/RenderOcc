@@ -1,12 +1,11 @@
+## Prepare NuScenes Dataset
 
-## NuScenes
-- Prepare Data
 step 1: Download nuScenes V1.0 full dataset data from [HERA](https://www.nuscenes.org/download) on `./data/nuscenes`.
 
 step 2: Download (only) the 'gts' from [Occ3D-nuScenes](https://github.com/Tsinghua-MARS-Lab/Occ3D)
 
-
 step 3: Create the pkl files:
+
 ```
 python tools/create_data_bevdet.py
 ```
@@ -26,6 +25,7 @@ cd ckpts & wget https://github.com/pmj110119/storage/releases/download/v1/bevdet
 ```
 
 **Folder structure**
+
 ```
 RenderOcc
 ├── mmdet3d/
