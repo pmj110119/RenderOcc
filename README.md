@@ -39,9 +39,9 @@
 
 ## Model Zoo
 
-| Method    | Backbone  | 2D-to-3D  | Lr Schd | GT | mIoU  | Config                                          | Download                                                                                    |
-|:---------:|:---------:|:---------:|:-------:|:-------:|:-----:|:-----------------------------------------------:|:-------------------------------------------------------------------------------------------:|
-| RenderOcc | Swin-Base | BEVStereo | 12ep    | 2D | 24.46 | [config](configs/renderocc/renderocc-7frame.py) | [model](https://github.com/pmj110119/storage/releases/download/v1/renderocc-7frame-12e.pth) |
+| Method    | Backbone  | 2D-to-3D  | Lr Schd | GT | mIoU  | Config | Log | Download  |
+|:---------:|:---------:|:---------:|:-------:|:-------:|:-----:|:-----:|:-----------------------------------------------:|:-------------------------------------------------------------------------------------------:|
+| RenderOcc | Swin-Base | BEVStereo | 12ep    | 2D | 24.46 | [config](configs/renderocc/renderocc-7frame.py) | [log](https://github.com/pmj110119/storage/releases/download/v1/20231006_000233.log) | [model](https://github.com/pmj110119/storage/releases/download/v1/renderocc-7frame-12e.pth) |
 
 * More model weights will be released later.
 
