@@ -1,15 +1,18 @@
-import enum
-import os
-from multiprocessing import Pool
 
+import os
+import cv2
+import copy
+import enum
 import mmcv
 import numpy as np
-import cv2
+from tqdm import tqdm
+from multiprocessing import Pool
+
 from nuscenes.utils.data_classes import LidarPointCloud
 from nuscenes.utils.geometry_utils import view_points
 from pyquaternion import Quaternion
-import copy
 np.random.seed(0)
+
 # https://github.com/nutonomy/nuscenes-devkit/blob/master/python-sdk/nuscenes/nuscenes.py#L834
 def map_pointcloud_to_image(
     pc,
@@ -78,11 +81,12 @@ def map_pointcloud_to_image(
     return points, coloring, labels
 
 
-info_path_train = './data/nuscenes/occ_infos_temporal_train.pkl'
-info_path_val = './data/nuscenes/occ_infos_temporal_val.pkl'
+save_folder = os.path.join('./data/nuscenes/', 'seg_gt_lidarseg') 
+info_path_train = './data/nuscenes/bevdetv2-nuscenes_infos_train.pkl'
+info_path_val = './data/nuscenes/bevdetv2-nuscenes_infos_val.pkl'
 
-# data3d_nusc = NuscMVDetData()
 
+visual=False
 lidar_key = 'LIDAR_TOP'
 cam_keys = [
     'CAM_FRONT_LEFT', 'CAM_FRONT', 'CAM_FRONT_RIGHT', 'CAM_BACK_RIGHT',
@@ -178,53 +182,18 @@ label_map = {
     'static.vegetation':16
 }
 
-filter_mask = [0, 1, 2, 3, 4, 5, 6, 7, 9, 10]
-
 label_merged_map = {}
 for idx in label_name:
     name = label_name[idx]
     idx_merged = label_map[name]
     label_merged_map[idx] = idx_merged
-print(label_merged_map)
 
 label_merged_map = {0: 0, 1: 0, 2: 7, 3: 7, 4: 7, 5: 0, 6: 7, 7: 0, 8: 0, 9: 1, 10: 0, 11: 0, 12: 8, 13: 0, 14: 2, 15: 3, 16: 3, 17: 4, 18: 5, 19: 0, 20: 0, 21: 6, 22: 9, 23: 10, 24: 11, 25: 12, 26:
 13, 27: 14, 28: 15, 29: 0, 30: 16, 31: 0}
 
-names = set()
-
-save_folder = os.path.join('./data/nuscenes/', 'seg_gt_merge17_val') 
-mmcv.mkdir_or_exist(save_folder)
 
 def worker(info):
-    visual=False
-    save_folder = os.path.join('./data/nuscenes/', 'seg_gt_merge17_val') 
     lidar_path = info['lidar_path']
-    
-    # for i, cam_key in enumerate(cam_keys):
-    #     # if cam_key!=cam_keys[5]: continue
-    #     file_name = os.path.split(info['cams'][cam_key]['data_path'])[-1]
-
-    #     if 'n008-2018-09-18-13-10-39-0400__CAM_BACK_RIGHT__' in file_name and '15372908' in file_name:
-    #         import ipdb;ipdb.set_trace()
-    #         print(2)
-    #     else:
-    #         return
-    #     # if file_name!='n008-2018-09-18-13-10-39-0400__CAM_BACK_RIGHT__1537290893428113.jpg':
-    #     #     print(file_name)
-    #     #     return
-    #     # else:
-            
-
-
-
-    # import ipdb;ipdb.set_trace()
-    # nusc.render_pointcloud_in_image(info['token'],
-    #                                 pointsensor_channel='LIDAR_TOP',
-    #                                 camera_channel='CAM_FRONT',
-    #                                 render_intensity=False,
-    #                                 show_lidarseg=True,
-    #                                 # filter_lidarseg_labels=[22, 23, 24],
-    #                                 show_lidarseg_legend=True)
     
     points = np.fromfile(lidar_path,
                          dtype=np.float32,
@@ -235,35 +204,17 @@ def worker(info):
                                                 nusc.get('sample', info['token'])['data']['LIDAR_TOP']
                                                 )['filename'])
     points_label = np.fromfile(lidarseg_labels_filename, dtype=np.uint8)
-    # import ipdb;ipdb.set_trace()
-    # import ipdb;ipdb.set_trace()
-    if 'merge' in save_folder:
-        points_label_merge = np.zeros_like(points_label)
-        for key in label_merged_map:
-            points_label_merge[points_label==key] = label_merged_map[key]
+    points_label_merge = np.zeros_like(points_label)
+    for key in label_merged_map:
+        points_label_merge[points_label==key] = label_merged_map[key]
     points[:,3] = points_label_merge
-
-    # if (points==7).sum()>0:
-    #     print((points_label==key).sum())
-    #     import ipdb;ipdb.set_trace()
-    #     print(111)
-
-    # mask = points_label!=0      # 消除others类的影响（lidarseg中将所有五花八门的稀有类合并为others、不参与评测，cvpr这个比赛参与评测有点搞。。）
-    # points = points[mask]
 
     lidar2ego_translation = info['lidar2ego_translation']
     lidar2ego_rotation = info['lidar2ego_rotation']
     ego2global_translation = info['ego2global_translation']
     ego2global_rotation = info['ego2global_rotation']
     for i, cam_key in enumerate(cam_keys):
-        # if cam_key!=cam_keys[5]: continue
         file_name = os.path.split(info['cams'][cam_key]['data_path'])[-1]
-        # if file_name != 'n015-2018-11-21-19-38-26+0800__CAM_FRONT__1542800853912460.jpg':
-        #     continue
-        # name = file_name.split('-')[0]
-        # names.add(name)
-        # print(name)
-        # continue
         sensor2ego_translation = info['cams'][cam_key]['sensor2ego_translation']
         sensor2ego_rotation = info['cams'][cam_key]['sensor2ego_rotation']
         cam_ego2global_translation = info['cams'][cam_key]['ego2global_translation']
@@ -283,60 +234,28 @@ def worker(info):
             copy.deepcopy(cam_ego2global_rotation),
             copy.deepcopy(cam_intrinsic))
         
-        
-        
-        # exit()
-      
-
         np.concatenate([pts_img[:2, :].T, label[:,None]],
                        axis=1).astype(np.float32).flatten().tofile(
                            os.path.join(save_folder, f'{file_name}.bin'))
-        # import ipdb;ipdb.set_trace()
         if visual:
             mmcv.mkdir_or_exist(os.path.join('./data', 'seg_gt_visual'))
             png_name = os.path.join('./data', 'seg_gt_visual', file_name)
             img_drawed = draw_points(img, pts_img[:2,:].astype(np.int), label)
             cv2.imwrite(png_name, img_drawed)
         
-    # import ipdb;ipdb.set_trace()
-
-from tqdm import tqdm
-
-from multiprocessing import Pool
-
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--idx", type=int, default=0)
-    args = parser.parse_args()
+    print('Save to %s'%save_folder)
+    mmcv.mkdir_or_exist(save_folder)
 
-    # infos = mmcv.load(info_path_train)['infos']
-    # lens = len(infos)
-
-    # idx = args.idx
-    # start, end = (lens//4)*idx, (lens//4)*(idx+1)
-    # print(start, end, lens)
-    # # if idx==4:
-    # #     with Pool(8) as p:
-    # #         p.map(worker, infos[start:])
-    # # else:
-    # #     with Pool(8) as p:
-    # #         p.map(worker, infos[start:end])
-
-    # for info in tqdm(infos,total=len(infos)):
-    #     worker(info)
-    #     for cam_key in cam_keys:
-    #         file_name = os.path.split(info['cams'][cam_key]['data_path'])[-1]
-    #         # print(file_name)
-
-
-
-
+    infos = mmcv.load(info_path_train)['infos']
+    print(info_path_train, len(infos))
+    with Pool(8) as p:
+        p.map(worker, infos)
 
     infos = mmcv.load(info_path_val)['infos']
-    print(len(infos))
-    with Pool(6) as p:
+    print(info_path_val, len(infos))
+    with Pool(8) as p:
         p.map(worker, infos)
 
 
