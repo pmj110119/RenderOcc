@@ -47,7 +47,7 @@ def get_rays(i, j, K, c2w, inverse_y=True):
 
 
 def pts2ray(coor, label_depth, label_seg, c2w, cam_intrinsic):
-    rays_o, rays_d, viewdirs = get_rays(coor[:,1]+0.5, coor[:,0]+0.5, K=cam_intrinsic,c2w=c2w)
+    rays_o, rays_d, viewdirs = get_rays(coor[:,0]+0.5, coor[:,1]+0.5, K=cam_intrinsic,c2w=c2w)
     return torch.cat([
         coor, label_depth.unsqueeze(1), label_seg.unsqueeze(1),  # 0-1, 2, 3
         rays_o, rays_d, viewdirs        # 4:7,7:10,10:13
