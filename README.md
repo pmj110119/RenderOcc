@@ -1,6 +1,6 @@
 # RenderOcc
 
-### [paper](https://arxiv.org/abs/2309.09502) | [video](https://www.youtube.com/watch?v=UcdXM3FNLAc)
+### [Paper](https://arxiv.org/abs/2309.09502) | [Video](https://www.youtube.com/watch?v=UcdXM3FNLAc) | [Technical Report](https://opendrivelab.com/e2ead/AD23Challenge/Track_3_UniOcc.pdf) (UniOcc)
 
 ![demo](assets/demo.gif)
 (Visualization of RenderOcc's prediction, which is supervised only with 2D labels.)
