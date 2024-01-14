@@ -139,14 +139,7 @@ def main():
 
     assert args.eval or args.dump_dir, \
         ('Please specify at least one operation (save/eval/format/show the '
-         'results / save the results) with the argument "--out", "--eval"'
-         ', "--format-only", "--show" or "--show-dir"')
-
-    if args.eval and args.format_only:
-        raise ValueError('--eval and --format_only cannot be both specified')
-
-    # if args.out is not None and not args.out.endswith(('.pkl', '.pickle')):
-    #     raise ValueError('The output file must be a pkl file.')
+         'results / save the results) with the argument "--eval", "--dump_dir"')
 
     cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:
