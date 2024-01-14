@@ -169,7 +169,7 @@ def _fill_trainval_infos(nusc,
     """
     train_nusc_infos = []
     val_nusc_infos = []
-
+    frame_idx = 0
     for sample in mmcv.track_iter_progress(nusc.sample):
         lidar_token = sample['data']['LIDAR_TOP']
         sd_rec = nusc.get('sample_data', sample['data']['LIDAR_TOP'])
@@ -179,10 +179,13 @@ def _fill_trainval_infos(nusc,
         lidar_path, boxes, _ = nusc.get_sample_data(lidar_token)
 
         mmcv.check_file_exist(lidar_path)
-
+        scene_name = nusc.get('scene', sample['scene_token'])['name']
+        
         info = {
             'lidar_path': lidar_path,
             'token': sample['token'],
+            'scene_name': scene_name,
+            'frame_idx': frame_idx,  # temporal related info
             'sweeps': [],
             'cams': dict(),
             'lidar2ego_translation': cs_record['translation'],
@@ -191,6 +194,11 @@ def _fill_trainval_infos(nusc,
             'ego2global_rotation': pose_record['rotation'],
             'timestamp': sample['timestamp'],
         }
+
+        if sample['next'] == '':
+            frame_idx = 0
+        else:
+            frame_idx += 1
 
         l2e_r = info['lidar2ego_rotation']
         l2e_t = info['lidar2ego_translation']

@@ -13,17 +13,17 @@ from torch_efficient_distloss import flatten_eff_distloss
 from .utils import Raw2Alpha, Alphas2Weights, ub360_utils_cuda, silog_loss
 
 
-# OpenOccupancy
+## OpenOccupancy
 # nusc_class_frequencies = np.array([2242961742295, 25985376, 1561108, 28862014, 196106643, 15920504,
 #                 2158753, 26539491, 4004729, 34838681, 75173306, 2255027978, 50959399, 646022466, 869055679,
 #                 1446141335, 1724391378])
 
-# occ3d-nuscenes
+## occ3d-nuscenes
 nusc_class_frequencies = np.array([1163161, 2309034, 188743, 2997643, 20317180, 852476, 243808, 2457947, 
             497017, 2731022, 7224789, 214411435, 5565043, 63191967, 76098082, 128860031, 
             141625221, 2307405309])
 
-@functools.lru_cache(maxsize=128)
+# @functools.lru_cache(maxsize=128)
 def create_full_step_id(shape):
     ray_id = torch.arange(shape[0]).view(-1,1).expand(shape).flatten()
     step_id = torch.arange(shape[1]).view(1,-1).expand(shape).flatten()
@@ -305,7 +305,6 @@ class NerfHead(nn.Module):
 
 
     def forward(self, density, semantic, rays=None, bda=None, **kwargs):
-        # import pdb;pdb.set_trace()s
         gt_depths = rays[..., 2]
         gt_semantics = rays[..., 3]
         ray_o = rays[..., 4:7]

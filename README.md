@@ -19,23 +19,27 @@
 
 - Train 
   
-  ```
+  ```bash
   # Train RenderOcc with 8 GPUs
   ./tools/dist_train.sh ./configs/renderocc/renderocc-7frame.py 8
   ```
 
 - Evaluation 
   
-  ```
+  ```bash
   # Eval RenderOcc with 8 GPUs
   ./tools/dist_test.sh ./configs/renderocc/renderocc-7frame.py ./path/to/ckpts.pth 8
   ```
 
 - Visualization
   
+  ```bash
+  # Dump predictions
+  bash tools/dist_test.sh configs/renderocc/renderocc-7frame.py renderocc-7frame-12e.pth 1 --dump_dir=work_dirs/output
+  # Visualization (select scene-id)
+  python tools/visualization/visual.py work_dirs/output/scene-xxxx
   ```
-  # TODO
-  ```
+  (The pkl file needs to be regenerated for visualization.)
 
 ## Model Zoo
 

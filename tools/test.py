@@ -13,14 +13,14 @@ from mmcv.runner import (get_dist_info, init_dist, load_checkpoint,
                          wrap_fp16_model)
 
 import mmdet
-from mmdet3d.apis import single_gpu_test
+from mmdet3d.apis import single_gpu_test, multi_gpu_test
 
 
 from mmdet3d.datasets import build_dataloader, build_dataset
 from mmdet3d.models import build_model
 
 from mmdet.datasets import replace_ImageToTensor
-from mmdet.apis import multi_gpu_test, set_random_seed
+from mmdet.apis import set_random_seed
 from mmdet3d.utils import patch_config
 
 if mmdet.__version__ > '2.23.0':
@@ -62,12 +62,6 @@ def parse_args():
         help='id of gpu to use '
         '(only applicable to non-distributed testing)')
     parser.add_argument(
-        '--format-only',
-        action='store_true',
-        help='Format the output results without perform evaluation. It is'
-        'useful when you want to format the result to a specific format and '
-        'submit it to the test server')
-    parser.add_argument(
         '--eval',
         type=str,
         nargs='+',
@@ -78,10 +72,8 @@ def parse_args():
         type=int,
         default=1,
         )
-    parser.add_argument('--show', action='store_true', help='show results')
-    parser.add_argument('--visual', action='store_true', help='show my visual results')
     parser.add_argument(
-        '--show-dir', help='directory where results will be saved')
+        '--dump_dir', help='directory where results will be saved')
     parser.add_argument(
         '--gpu-collect',
         action='store_true',
@@ -145,8 +137,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    assert args.out or args.eval or args.format_only or args.show \
-        or args.show_dir, \
+    assert args.eval or args.dump_dir, \
         ('Please specify at least one operation (save/eval/format/show the '
          'results / save the results) with the argument "--out", "--eval"'
          ', "--format-only", "--show" or "--show-dir"')
@@ -248,15 +239,18 @@ def main():
         # segmentation dataset has `PALETTE` attribute
         model.PALETTE = dataset.PALETTE
     
+    if args.dump_dir is not None:
+        os.makedirs(args.dump_dir, exist_ok=True)
+
     if not distributed:
         model = MMDataParallel(model, device_ids=cfg.gpu_ids)
-        outputs = single_gpu_test(model, data_loader, args.show, args.show_dir)
+        outputs = single_gpu_test(model, data_loader)
     else:
         model = MMDistributedDataParallel(
             model.cuda(),
             device_ids=[torch.cuda.current_device()],
             broadcast_buffers=False)
-        outputs = multi_gpu_test(model, data_loader, args.tmpdir,
+        outputs = multi_gpu_test(model, data_loader, args.dump_dir,
                                 args.gpu_collect
                                 )
 
@@ -265,10 +259,7 @@ def main():
 
     rank, _ = get_dist_info()
     if rank == 0:
-        kwargs = {} if args.eval_options is None else args.eval_options
-        if args.format_only:
-            dataset.format_results(outputs, **kwargs)
-        
+        kwargs = {} if args.eval_options is None else args.eval_optionsz
         if args.eval:
             eval_kwargs = cfg.get('evaluation', {}).copy()
             # hard-code way to remove EvalHook args

@@ -174,7 +174,6 @@ class NuScenesDatasetOccpancy(NuScenesDataset):
         print('\nStarting Evaluation...')
         for index, occ_pred in enumerate(tqdm(occ_results)):
             info = self.data_infos[index]
-
             occ_gt = np.load(os.path.join(info['occ_path'],'labels.npz'))
             gt_semantics = occ_gt['semantics']
             mask_lidar = occ_gt['mask_lidar'].astype(bool)
@@ -182,10 +181,5 @@ class NuScenesDatasetOccpancy(NuScenesDataset):
             # occ_pred = occ_pred
             self.occ_eval_metrics.add_batch(occ_pred, gt_semantics, mask_lidar, mask_camera)
 
-            if index%100==0 and show_dir is not None:
-                gt_vis = self.vis_occ(gt_semantics)
-                pred_vis = self.vis_occ(occ_pred)
-                mmcv.imwrite(np.concatenate([gt_vis, pred_vis], axis=1),
-                             os.path.join(show_dir + "%d.jpg"%index))
 
         return self.occ_eval_metrics.count_miou()

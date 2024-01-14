@@ -238,7 +238,10 @@ class NuScenesDataset(Custom3DDataset):
             pts_filename=info['lidar_path'],
             sweeps=info['sweeps'],
             timestamp=info['timestamp'] / 1e6,
+            scene_name=info['scene_name'],
+            frame_idx=info['frame_idx'],
         )
+
         if 'ann_infos' in info:
             input_dict['ann_infos'] = info['ann_infos']
         if self.modality['use_camera']:
