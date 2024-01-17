@@ -1,4 +1,4 @@
-open3d
+open3d==0.14.1
 spconv
 waymo-open-dataset-tf-2-5-0
 lyft_dataset_sdk
