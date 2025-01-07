@@ -64,10 +64,12 @@ Related Projects:
 If this work is helpful for your research, please consider citing:
 
 ```
-@article{pan2023renderocc,
-  title={RenderOcc: Vision-Centric 3D Occupancy Prediction with 2D Rendering Supervision},
-  author={Pan, Mingjie and Liu, Jiaming and Zhang, Renrui and Huang, Peixiang and Li, Xiaoqi and Liu, Li and Zhang, Shanghang},
-  journal={arXiv preprint arXiv:2309.09502},
-  year={2023}
+@inproceedings{pan2024renderocc,
+  title={Renderocc: Vision-centric 3d occupancy prediction with 2d rendering supervision},
+  author={Pan, Mingjie and Liu, Jiaming and Zhang, Renrui and Huang, Peixiang and Li, Xiaoqi and Xie, Hongwei and Wang, Bing and Liu, Li and Zhang, Shanghang},
+  booktitle={2024 IEEE International Conference on Robotics and Automation (ICRA)},
+  pages={12404--12411},
+  year={2024},
+  organization={IEEE}
 }
 ```
